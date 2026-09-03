@@ -7,7 +7,7 @@
    ========================================================= */
 
 const APP_CONFIG = {
-  API_URL: "PASTE_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE",
+  API_URL: "https://script.google.com/macros/s/AKfycbwzboOy6ZyVvWAJpfExSnsmxsZzsCGPslqCfNA90_LwdaZ-LAzL2KQx_DTvsIRTlpwJ8Q/exec",
   DEFAULT_LIMIT: 25,
   MAX_LIMIT: 100,
   TIMEZONE: "Asia/Jakarta",
