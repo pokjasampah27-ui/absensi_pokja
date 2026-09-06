@@ -15,7 +15,7 @@ const APP_CONFIG = {
    ========================================================= */
 
 const state = {
-  tab: "attendance",
+  tab: "dashboard",
   employees: [],
   classes: [],
   attendanceHistory: [],
@@ -72,7 +72,7 @@ function debounce(func, delay = APP_CONFIG.DEBOUNCE_DELAY) {
 }
 
 /* =========================================================
-   UI STATE & NOTIFICATIONS
+   UI STATE, CLOCK & NOTIFICATIONS
    ========================================================= */
 
 function setLoading(isLoading, message = "Memuat...") {
@@ -105,7 +105,7 @@ function setButtonLoading(button, isLoading, loadingText = "Menyimpan...") {
   if (isLoading) {
     button.dataset.originalText = button.innerHTML;
     button.disabled = true;
-    button.innerHTML = `<span class="spinner-border"></span> ${loadingText}`;
+    button.innerHTML = `<span class="spinner"></span> ${loadingText}`;
   } else {
     button.disabled = false;
     if (button.dataset.originalText) {
@@ -115,16 +115,31 @@ function setButtonLoading(button, isLoading, loadingText = "Menyimpan...") {
 }
 
 function updateConnection(isConnected, statusText = "") {
-  const badge = $("#connectionBadge");
-  if (!badge) return;
+  const dot = $("#connectionDot");
+  const text = $("#connectionText");
 
-  if (isConnected) {
-    badge.className = "status-badge status-online";
-    badge.textContent = statusText || "Terhubung";
-  } else {
-    badge.className = "status-badge status-offline";
-    badge.textContent = statusText || "Terputus";
+  if (dot) {
+    dot.className = `connection-dot ${isConnected ? "online" : "offline"}`;
   }
+  if (text) {
+    text.textContent = statusText || (isConnected ? "Online" : "Offline");
+  }
+}
+
+function startClock() {
+  const clockEl = $("#clockTime");
+  const update = () => {
+    if (clockEl) {
+      const now = new Date();
+      clockEl.textContent = now.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+  };
+  update();
+  setInterval(update, 1000);
 }
 
 /* =========================================================
@@ -174,6 +189,7 @@ async function apiPost(action, body = {}) {
    ========================================================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+  startClock();
   initApp().catch(handleError);
   setupEventListeners();
 });
@@ -197,8 +213,8 @@ async function initApp() {
       loadClasses()
     ]);
 
-    // Load initial tab history
-    await loadAttendanceHistory();
+    // Load initial view
+    switchTab("dashboard");
   } catch (error) {
     updateConnection(false, "Offline");
     handleError(error);
@@ -208,11 +224,11 @@ async function initApp() {
 }
 
 function setupEventListeners() {
-  // Navigation Tabs
-  $$(".nav-tab").forEach((tabBtn) => {
+  // Navigation Tabs (Desktop Sidebar & Mobile Nav)
+  $$(".nav-item, .mobile-nav-item").forEach((tabBtn) => {
     tabBtn.addEventListener("click", (e) => {
       const tabName = e.currentTarget.dataset.tab;
-      switchTab(tabName);
+      if (tabName) switchTab(tabName);
     });
   });
 
@@ -252,12 +268,21 @@ function setupEventListeners() {
 function switchTab(tabName) {
   state.tab = tabName;
 
-  $$(".nav-tab").forEach((btn) => {
+  // Active state untuk Desktop Nav
+  $$(".nav-item").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.tab === tabName);
   });
 
-  $$(".tab-content").forEach((content) => {
-    content.classList.toggle("hidden", content.id !== `tab-${tabName}`);
+  // Active state untuk Mobile Nav
+  $$(".mobile-nav-item").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
+  });
+
+  // Toggle Page Visibility
+  $$(".page").forEach((page) => {
+    const isTarget = page.id === `page-${tabName}` || page.id === tabName;
+    page.classList.toggle("active", isTarget);
+    page.classList.toggle("hidden", !isTarget);
   });
 
   // Load Tab Specific Data
@@ -302,7 +327,7 @@ async function loadClasses() {
 }
 
 function renderClassDropdown(classes) {
-  const select = $("#classSelect");
+  const select = $("#classSelect") || $("#dutyClassSelect");
   if (!select) return;
 
   select.innerHTML = '<option value="">-- Pilih Kelas --</option>';
@@ -324,10 +349,10 @@ async function handleAttendanceSubmit(e) {
   const submitBtn = form.querySelector('button[type="submit"]');
 
   const payload = {
-    employeeId: $("#employeeSelect").value,
-    date: $("#attendanceDate").value,
-    status: $("#attendanceStatus").value,
-    notes: $("#attendanceNotes").value
+    employeeId: $("#employeeSelect")?.value,
+    date: $("#attendanceDate")?.value,
+    status: $("#attendanceStatus")?.value,
+    notes: $("#attendanceNotes")?.value
   };
 
   if (!payload.employeeId || !payload.date || !payload.status) {
@@ -341,7 +366,7 @@ async function handleAttendanceSubmit(e) {
     await apiPost("submitAttendance", payload);
     showToast("Kehadiran pegawai berhasil dicatat.");
     form.reset();
-    $("#attendanceDate").value = todayInputDate();
+    if ($("#attendanceDate")) $("#attendanceDate").value = todayInputDate();
     loadAttendanceHistory().catch(handleError);
   } catch (error) {
     handleError(error);
@@ -356,12 +381,12 @@ async function handleDutySubmit(e) {
   const submitBtn = form.querySelector('button[type="submit"]');
 
   const payload = {
-    classId: $("#classSelect").value,
-    date: $("#dutyDate").value,
-    presenceStatus: $("#dutyPresenceStatus").value,
-    wasteSeparation: $("#dutyWasteSeparation").value,
-    adiwiyataAttitude: $("#dutyAttitude").value,
-    notes: $("#dutyNotes").value
+    classId: ($("#classSelect") || $("#dutyClassSelect"))?.value,
+    date: $("#dutyDate")?.value,
+    presenceStatus: $("#dutyPresenceStatus")?.value,
+    wasteSeparation: $("#dutyWasteSeparation")?.value,
+    adiwiyataAttitude: $("#dutyAttitude")?.value,
+    notes: $("#dutyNotes")?.value
   };
 
   if (!payload.classId || !payload.date || !payload.presenceStatus) {
@@ -375,7 +400,7 @@ async function handleDutySubmit(e) {
     await apiPost("submitDuty", payload);
     showToast("Monitoring piket kelas berhasil dicatat.");
     form.reset();
-    $("#dutyDate").value = todayInputDate();
+    if ($("#dutyDate")) $("#dutyDate").value = todayInputDate();
     loadDutyHistory().catch(handleError);
   } catch (error) {
     handleError(error);
@@ -480,10 +505,10 @@ function renderPagination(type, currentPage, totalPages) {
   const total = Number(totalPages) || 1;
 
   container.innerHTML = `
-    <div class="pagination-controls">
-      <button class="btn btn-sm btn-outline" data-pagination="${type}-prev" ${current <= 1 ? "disabled" : ""}>&laquo; Prev</button>
-      <span class="pagination-info">Halaman <strong>${current}</strong> dari <strong>${total}</strong></span>
-      <button class="btn btn-sm btn-outline" data-pagination="${type}-next" ${current >= total ? "disabled" : ""}>Next &raquo;</button>
+    <span class="pagination-info">Halaman <strong>${current}</strong> dari <strong>${total}</strong></span>
+    <div class="pagination-buttons">
+      <button class="btn btn-small btn-light" data-pagination="${type}-prev" ${current <= 1 ? "disabled" : ""}>&laquo; Prev</button>
+      <button class="btn btn-small btn-light" data-pagination="${type}-next" ${current >= total ? "disabled" : ""}>Next &raquo;</button>
     </div>
   `;
 
@@ -527,20 +552,20 @@ function refreshHistory() {
 }
 
 function statusBadge(status) {
-  if (!status) return `<span class="badge badge-secondary"> - </span>`;
+  if (!status) return `<span class="status-badge neutral">-</span>`;
 
   const s = String(status).toLowerCase();
-  let badgeClass = "badge-secondary";
+  let badgeClass = "neutral";
 
   if (s === "hadir" || s === "terpilah" || s === "ramah" || s === "sangat baik") {
-    badgeClass = "badge-success";
+    badgeClass = "success";
   } else if (s === "izin" || s === "sakit" || s === "acuh" || s === "cukup") {
-    badgeClass = "badge-warning";
+    badgeClass = "warning";
   } else if (s === "tidak hadir" || s === "tercampur" || s === "kurang" || s === "tidak sopan") {
-    badgeClass = "badge-danger";
+    badgeClass = "danger";
   }
 
-  return `<span class="badge ${badgeClass}">${escapeHTML(status)}</span>`;
+  return `<span class="status-badge ${badgeClass}">${escapeHTML(status)}</span>`;
 }
 
 /* =========================================================
