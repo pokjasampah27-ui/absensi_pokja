@@ -5,7 +5,7 @@
 
 const APP_CONFIG = {
   // Ganti dengan Executable Web App URL dari Google Apps Script Anda
-  API_URL: "https://script.google.com/macros/s/AKfycbxYOUR_DEPLOYED_SCRIPT_ID_HERE/exec",
+  API_URL: "https://script.google.com/macros/s/AKfycbxas_06nj7D3INUKSNjdzTaft7j38WrGp3596JtF4pF6rINcx7UHvSK5BB3C432RLavPA/exec",
   TIMEZONE: "Asia/Jakarta",
   DEBOUNCE_DELAY: 300
 };
