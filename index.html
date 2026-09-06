@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#167c80">
+  <meta name="description" content="Sistem digital kehadiran pegawai dan monitoring piket kelas Adiwiyata">
+  <title>Absensi Adiwiyata</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div id="globalLoader" class="global-loader">
+    <div class="loader-card">
+      <div class="loader-spinner"></div>
+      <strong>Memuat data...</strong>
+      <span>Menghubungkan ke database Adiwiyata</span>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          <span>♻</span>
+        </div>
+        <div class="brand-copy">
+          <strong>ADIWIYATA</strong>
+          <span>Digital Management</span>
+        </div>
+      </div>
+
+      <nav class="main-nav">
+        <div class="nav-label">MENU UTAMA</div>
+
+        <button class="nav-btn active" data-tab="dashboard" type="button">
+          <span class="nav-icon">⌂</span>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-btn" data-tab="pegawai" type="button">
+          <span class="nav-icon">✓</span>
+          <span>Presensi Pegawai</span>
+        </button>
+
+        <button class="nav-btn" data-tab="piket" type="button">
+          <span class="nav-icon">K</span>
+          <span>Piket Kelas</span>
+        </button>
+
+        <button class="nav-btn" data-tab="rekap" type="button">
+          <span class="nav-icon">▥</span>
+          <span>Rekap & Analitik</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="connection-card">
+          <div class="connection-title">
+            <span id="apiDot" class="connection-dot offline"></span>
+            <strong id="apiLabel">Belum terhubung</strong>
+          </div>
+          <small>Google Apps Script</small>
+        </div>
+
+        <div class="eco-note">
+          <span>🌱</span>
+          <p>“Sekolah bersih dimulai dari kebiasaan kecil yang dilakukan bersama.”</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="mobile-brand">
+            <div class="brand-mark small"><span>♻</span></div>
+            <strong>ADIWIYATA</strong>
+          </div>
+
+          <div class="page-heading">
+            <div class="eyebrow">SISTEM INFORMASI</div>
+            <h1 id="pageTitle">Dashboard</h1>
+            <p id="pageSubtitle">Ringkasan aktivitas Adiwiyata hari ini</p>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="live-clock">
+            <span id="currentDate">—</span>
+            <strong id="currentTime">—</strong>
+          </div>
+          <button id="btnRefresh" class="icon-btn refresh-btn" type="button" title="Refresh data">↻</button>
+        </div>
+      </header>
+
+      <div id="configBanner" class="config-banner hidden">
+        <div class="config-banner-icon">!</div>
+        <div>
+          <strong>Web App belum terhubung</strong>
+          <span id="configBannerText">Ganti API_URL pada file script.js dengan URL Web App Google Apps Script kamu.</span>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <section id="page-dashboard" class="page-section active">
+
+        <div class="hero-card">
+          <div class="hero-copy">
+            <span class="hero-kicker">🌿 HARI INI</span>
+            <h2>Kelola kehadiran,<br><em>jaga lingkungan.</em></h2>
+            <p>Satu dashboard untuk mencatat presensi pegawai dan memantau piket kelas secara lebih rapi.</p>
+
+            <div class="hero-actions">
+              <button id="btnGoAttendance" class="btn primary" type="button">
+                <span>✓</span> Catat Presensi
+              </button>
+              <button id="btnGoPiket" class="btn ghost-light" type="button">
+                <span>＋</span> Catat Piket
+              </button>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="leaf-orbit orbit-1"></div>
+            <div class="leaf-orbit orbit-2"></div>
+            <div class="hero-plant">🌱</div>
+            <div class="hero-circle circle-back"></div>
+            <div class="hero-circle circle-front"></div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">RINGKASAN HARI INI</div>
+            <h2>Aktivitas utama</h2>
+          </div>
+          <span id="todayStatus" class="soft-badge">Belum ada presensi</span>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-icon teal">✓</div>
+            <div class="stat-label">Presensi tercatat</div>
+            <div id="todayAttendance" class="stat-value">0</div>
+            <div class="stat-foot">pegawai hari ini</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">●</div>
+            <div class="stat-label">Hadir</div>
+            <div id="todayPresent" class="stat-value">0</div>
+            <div class="stat-foot">status HADIR</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon amber">!</div>
+            <div class="stat-label">Tidak hadir</div>
+            <div id="todayAbsent" class="stat-value">0</div>
+            <div class="stat-foot">izin, sakit, atau alfa</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon blue">K</div>
+            <div class="stat-label">Piket hadir</div>
+            <div class="stat-value"><span id="todayDuty">0</span><small>/ <span id="todayDutyTotal">0</span></small></div>
+            <div class="stat-foot">data kelas hari ini</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="section-kicker">MONITORING</div>
+                <h3>Tingkat kehadiran</h3>
+              </div>
+              <span class="mini-label">Hari ini</span>
+            </div>
+
+            <div class="rate-wrap">
+              <div id="attendanceRing" class="rate-ring" style="--progress: 0deg">
+                <div>
+                  <strong id="attendanceRate">0%</strong>
+                  <span>hadir</span>
+                </div>
+              </div>
+
+              <div class="rate-info">
+                <strong>Presensi pegawai</strong>
+                <p>Persentase dihitung dari seluruh data presensi yang tercatat untuk hari ini.</p>
+                <button id="btnGoRecap" class="text-btn" type="button">Lihat analitik →</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <div class="section-kicker">DATA MASTER</div>
+                <h3>Struktur sistem</h3>
+              </div>
+            </div>
+
+            <div class="master-list">
+              <div class="master-item">
+                <span class="master-icon">👥</span>
+                <div><strong>Pegawai aktif</strong><small>Sumber: EMPLOYEES</small></div>
+                <b id="employeeCount">0</b>
+              </div>
+              <div class="master-item">
+                <span class="master-icon">🏫</span>
+                <div><strong>Kelas</strong><small>Sumber: PIKET KELAS</small></div>
+                <b id="classCount">0</b>
+              </div>
+              <div class="master-item">
+                <span class="master-icon">🗃</span>
+                <div><strong>Database presensi</strong><small>ATTENDANCE</small></div>
+                <b id="todayAttendance">0</b>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel activity-panel">
+          <div class="panel-head">
+            <div>
+              <div class="section-kicker">AKTIVITAS</div>
+              <h3>Aktivitas terbaru</h3>
+            </div>
+          </div>
+          <div id="recentActivity" class="activity-list">
+            <div class="empty-state compact">Belum ada aktivitas.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PEGAWAI -->
+      <section id="page-pegawai" class="page-section">
+
+        <div class="content-grid form-layout">
+
+          <div class="panel form-panel">
+            <div class="panel-head">
+              <div>
+                <div class="section-kicker">INPUT DATA</div>
+                <h3>Presensi pegawai</h3>
+                <p>Data pegawai diambil otomatis dari sheet <b>EMPLOYEES</b>.</p>
+              </div>
+              <span class="form-number">01</span>
+            </div>
+
+            <form id="attendanceForm" autocomplete="off">
+
+              <div class="field">
+                <label>Nama pegawai <span>*</span></label>
+
+                <div id="employeePicker" class="picker">
+                  <button class="picker-trigger" type="button" onclick="openEmployeePicker()">
+                    <span class="picker-placeholder">Pilih pegawai...</span>
+                    <span>⌄</span>
+                  </button>
+
+                  <div id="selectedEmployee" class="selected-card"></div>
+
+                  <div class="picker-menu">
+                    <div class="picker-search">
+                      <input id="employeeSearchBox" type="search" placeholder="Cari nama pegawai...">
+                    </div>
+                    <div id="employeePickerList" class="picker-list"></div>
+                  </div>
+                </div>
+
+                <input id="employeeName" type="hidden">
+                <input id="employeeId" type="hidden">
+                <input id="employeePosition" type="hidden">
+              </div>
+
+              <div class="form-row">
+                <div class="field">
+                  <label>Tanggal <span>*</span></label>
+                  <input id="attendanceDate" type="date" required>
+                </div>
+
+                <div class="field">
+                  <label>Status kehadiran <span>*</span></label>
+                  <select id="attendanceStatus" required>
+                    <option value="">Pilih status...</option>
+                    <option value="HADIR">HADIR</option>
+                    <option value="IZIN">IZIN</option>
+                    <option value="SAKIT">SAKIT</option>
+                    <option value="ALFA">ALFA</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="attendanceNoteWrap" class="field hidden">
+                <label>Keterangan</label>
+                <textarea id="attendanceNote" rows="3" placeholder="Tambahkan keterangan jika diperlukan..."></textarea>
+              </div>
+
+              <div class="form-note">
+                <span>ℹ</span>
+                <p>Satu pegawai hanya dapat memiliki satu presensi pada tanggal yang sama.</p>
+              </div>
+
+              <div class="form-actions">
+                <button id="btnResetAttendance" class="btn secondary" type="button">Reset</button>
+                <button class="btn primary" type="submit">Simpan Presensi</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel tips-panel">
+            <div class="section-kicker">ALUR</div>
+            <h3>Cara menggunakan</h3>
+
+            <div class="step-list">
+              <div class="step">
+                <span>1</span>
+                <div><strong>Pilih pegawai</strong><p>Nama dan jabatan mengikuti master EMPLOYEES.</p></div>
+              </div>
+              <div class="step">
+                <span>2</span>
+                <div><strong>Tentukan tanggal</strong><p>Gunakan tanggal sesuai kegiatan presensi.</p></div>
+              </div>
+              <div class="step">
+                <span>3</span>
+                <div><strong>Pilih status</strong><p>HADIR, IZIN, SAKIT, atau ALFA.</p></div>
+              </div>
+              <div class="step">
+                <span>4</span>
+                <div><strong>Simpan</strong><p>Data masuk ke sheet ATTENDANCE.</p></div>
+              </div>
+            </div>
+
+            <div class="tip-card">
+              <span>🌿</span>
+              <div>
+                <strong>Database terpusat</strong>
+                <p>Frontend tidak menyimpan database pegawai sendiri. Semua data utama berasal dari Google Spreadsheet.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="panel table-panel">
+          <div class="panel-head table-head">
+            <div>
+              <div class="section-kicker">DATABASE</div>
+              <h3>Riwayat presensi pegawai</h3>
+            </div>
+            <div class="table-tools">
+              <input id="employeeSearch" class="compact-input" type="search" placeholder="Cari nama...">
+              <input id="attendanceDateFilter" class="compact-input" type="date">
+              <select id="attendanceStatusFilter" class="compact-input">
+                <option value="">Semua status</option>
+                <option value="HADIR">HADIR</option>
+                <option value="IZIN">IZIN</option>
+                <option value="SAKIT">SAKIT</option>
+                <option value="ALFA">ALFA</option>
+              </select>
+              <button id="btnExportAttendance" class="btn secondary small" type="button">CSV</button>
+            </div>
+          </div>
+
+          <div class="result-line"><span id="attendanceResultCount">0 data</span></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Pegawai</th>
+                  <th>Status</th>
+                  <th>Keterangan</th>
+                  <th>ID</th>
+                  <th>Timestamp</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="attendanceTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PIKET -->
+      <section id="page-piket" class="page-section">
+
+        <div class="content-grid form-layout">
+
+          <div class="panel form-panel">
+            <div class="panel-head">
+              <div>
+                <div class="section-kicker">INPUT DATA</div>
+                <h3>Monitoring piket kelas</h3>
+                <p>Master kelas dibaca dari sheet <b>PIKET KELAS</b>.</p>
+              </div>
+              <span class="form-number">02</span>
+            </div>
+
+            <form id="classDutyForm" autocomplete="off">
+
+              <div class="field">
+                <label>Kelas <span>*</span></label>
+
+                <div id="classPicker" class="picker">
+                  <button class="picker-trigger" type="button" onclick="openClassPicker()">
+                    <span id="selectedClass" class="picker-placeholder">Pilih kelas...</span>
+                    <span>⌄</span>
+                  </button>
+
+                  <div class="picker-menu">
+                    <div class="picker-search">
+                      <input id="classPickerSearch" type="search" placeholder="Cari kelas...">
+                    </div>
+                    <div id="classPickerList" class="picker-list"></div>
+                  </div>
+                </div>
+
+                <input id="className" class="manual-input" type="text" placeholder="Atau ketik nama kelas secara manual..." required>
+              </div>
+
+              <div class="form-row">
+                <div class="field">
+                  <label>Tanggal <span>*</span></label>
+                  <input id="classDutyDate" type="date" required>
+                </div>
+
+                <div class="field">
+                  <label>Kehadiran piket <span>*</span></label>
+                  <select id="classDutyAttendance" required>
+                    <option value="">Pilih status...</option>
+                    <option value="HADIR">HADIR</option>
+                    <option value="TIDAK PIKET">TIDAK PIKET</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="dutyConditionHint" class="form-note hidden">
+                <span>!</span>
+                <p>Status TIDAK PIKET tetap mengikuti field yang disimpan oleh backend.</p>
+              </div>
+
+              <div class="form-row">
+                <div class="field">
+                  <label>Kondisi tong sampah <span>*</span></label>
+                  <select id="binCondition" required>
+                    <option value="">Pilih kondisi...</option>
+                    <option value="BAIK">BAIK</option>
+                    <option value="CUKUP">CUKUP</option>
+                    <option value="KOTOR">KOTOR</option>
+                    <option value="PENUH">PENUH</option>
+                    <option value="RUSAK">RUSAK</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label>Respon petugas piket <span>*</span></label>
+                  <select id="petugasResponse" required>
+                    <option value="">Pilih respon...</option>
+                    <option value="BAIK">BAIK</option>
+                    <option value="CUKUP">CUKUP</option>
+                    <option value="KURANG">KURANG</option>
+                    <option value="TIDAK ADA">TIDAK ADA</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-note">
+                <span>ℹ</span>
+                <p>Satu kelas hanya dapat memiliki satu data piket pada tanggal yang sama.</p>
+              </div>
+
+              <div class="form-actions">
+                <button id="btnResetDuty" class="btn secondary" type="button">Reset</button>
+                <button class="btn primary" type="submit">Simpan Piket</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="panel tips-panel duty-visual-panel">
+            <div class="duty-illustration">
+              <div class="bin">🗑️</div>
+              <div class="spark spark-a">✦</div>
+              <div class="spark spark-b">✦</div>
+              <div class="spark spark-c">✦</div>
+            </div>
+
+            <div class="section-kicker">PANTAU 3 HAL</div>
+            <h3>Kebiasaan baik dimulai dari kelas</h3>
+
+            <div class="monitor-list">
+              <div><span>01</span><strong>Kehadiran</strong><small>Apakah petugas hadir?</small></div>
+              <div><span>02</span><strong>Kebersihan</strong><small>Kondisi tong sampah.</small></div>
+              <div><span>03</span><strong>Respons</strong><small>Sikap petugas piket.</small></div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="panel table-panel">
+          <div class="panel-head table-head">
+            <div>
+              <div class="section-kicker">DATABASE</div>
+              <h3>Riwayat piket kelas</h3>
+            </div>
+            <div class="table-tools">
+              <input id="classSearch" class="compact-input" type="search" placeholder="Cari kelas...">
+              <input id="classDutyDateFilter" class="compact-input" type="date">
+              <select id="classDutyClassFilter" class="compact-input">
+                <option value="">Semua kelas</option>
+              </select>
+              <button id="btnExportDuty" class="btn secondary small" type="button">CSV</button>
+            </div>
+          </div>
+
+          <div class="result-line"><span id="classDutyResultCount">0 data</span></div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Kelas</th>
+                  <th>Kehadiran</th>
+                  <th>Kondisi Tong</th>
+                  <th>Respons</th>
+                  <th>ID</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="classDutyTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- REKAP -->
+      <section id="page-rekap" class="page-section">
+
+        <div class="panel recap-control">
+          <div>
+            <div class="section-kicker">ANALITIK</div>
+            <h3>Rekap data</h3>
+            <p>Pilih jenis data dan rentang tanggal untuk mengambil rekap langsung dari backend.</p>
+          </div>
+
+          <div class="recap-filters">
+            <select id="recapType">
+              <option value="pegawai">Rekap Pegawai</option>
+              <option value="kelas">Rekap Piket Kelas</option>
+            </select>
+            <input id="recapStart" type="date">
+            <span>—</span>
+            <input id="recapEnd" type="date">
+          </div>
+        </div>
+
+        <div class="recap-stat-grid">
+          <div class="recap-stat">
+            <span class="recap-dot green"></span>
+            <small>HADIR</small>
+            <strong id="recapHadir">0</strong>
+          </div>
+          <div class="recap-stat">
+            <span class="recap-dot amber"></span>
+            <small>IZIN</small>
+            <strong id="recapIzin">0</strong>
+          </div>
+          <div class="recap-stat">
+            <span class="recap-dot blue"></span>
+            <small>SAKIT</small>
+            <strong id="recapSakit">0</strong>
+          </div>
+          <div class="recap-stat">
+            <span class="recap-dot red"></span>
+            <small>ALFA / TIDAK PIKET</small>
+            <strong id="recapAlfa">0</strong>
+          </div>
+          <div class="recap-stat dark">
+            <span class="recap-dot dark-dot"></span>
+            <small>TOTAL</small>
+            <strong id="recapTotal">0</strong>
+          </div>
+        </div>
+
+        <div class="panel table-panel">
+          <div class="panel-head">
+            <div>
+              <div class="section-kicker">DETAIL</div>
+              <h3>Performa & riwayat</h3>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table id="recapTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Pegawai</th>
+                  <th>Hadir</th>
+                  <th>Izin</th>
+                  <th>Sakit</th>
+                  <th>Alfa</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="recapTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MOBILE NAV -->
+  <nav class="mobile-nav">
+    <button class="mobile-nav-btn active" data-tab="dashboard" type="button"><span>⌂</span><small>Home</small></button>
+    <button class="mobile-nav-btn" data-tab="pegawai" type="button"><span>✓</span><small>Pegawai</small></button>
+    <button class="mobile-nav-btn" data-tab="piket" type="button"><span>K</span><small>Piket</small></button>
+    <button class="mobile-nav-btn" data-tab="rekap" type="button"><span>▥</span><small>Rekap</small></button>
+  </nav>
+
+  <script src="script.js"></script>
+</body>
+</html>
