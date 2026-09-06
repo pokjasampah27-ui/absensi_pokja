@@ -17,7 +17,7 @@
 // GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT KAMU.
 // Contoh:
 // const API_URL = 'https://script.google.com/macros/s/XXXXXXXX/exec';
-const API_URL = 'PASTE_URL_WEB_APP_DI_SINI';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxas_06nj7D3INUKSNjdzTaft7j38WrGp3596JtF4pF6rINcx7UHvSK5BB3C432RLavPA/exec';
 
 const APP = {
   timezone: 'Asia/Jakarta',
